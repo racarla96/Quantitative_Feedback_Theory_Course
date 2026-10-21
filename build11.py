@@ -304,6 +304,17 @@ body=r"""
   \textcolor{gray}{Solución en el apéndice.}
 \end{frame}
 
+\begin{frame}{Para programarlo: el notebook de este paso}
+  \small
+  Todo lo de este paso se puede \textbf{ejecutar} en el notebook \texttt{notebooks/paso11\_dos\_caminos.ipynb}.
+  \begin{itemize}
+    \item Python: $\nu=\frac{2}{T_s}\tan\frac{\omega T_s}{2}$, la sustitución $z\to w$ de polinomios y la equivalencia numérica de los dos caminos.
+    \item Cada cálculo de las diapositivas se \textbf{comprueba} en código, con las mismas cifras.
+    \item Incluye celdas \emph{Tu turno} con el ejercicio del paso y la solución plegada.
+  \end{itemize}
+  \footnotesize Requisitos: \texttt{numpy}, \texttt{scipy}, \texttt{matplotlib}; se abre con \texttt{jupyter lab notebooks/}. Ver \texttt{GUIA.md}.
+\end{frame}
+
 \begin{frame}{Resumen}
   \small
   \begin{itemize}
@@ -324,7 +335,7 @@ body=r"""
   \textbf{1.} $\nu=\dfrac{2}{0.1}\tan\dfrac{15\cdot0.1}{2}=20\tan0.75=18.63$ rad/s. $\omega_N=\pi/0.1=31.4$ rad/s.\\[3pt]
   \textbf{2.} $G(j18.63)=\dfrac{50(2+j18.63)}{20+j18.63}=25.9+j22.4$: módulo $34.28$ ($30.7$ dB), fase $40.9^\circ$.\\[3pt]
   \textbf{3.} $G(e^{j1.5})=27.5-22.5\,e^{-j1.5}=25.9+j22.4$: es el \textbf{mismo} número complejo.\\[3pt]
-  \textbf{4.} $G(j15)=21.2+j21.6$: módulo $29.62$ ($29.4$ dB), fase $45.5^\circ$. Se comete un error de $+1.3$ dB y $-4.6^\circ$.
+  \textbf{4.} $G(j15)=21.2+j21.6$: módulo $30.27$ ($29.6$ dB), fase $45.5^\circ$. Frente al valor correcto, el error es de $-1.1$ dB y $+4.6^\circ$.
   \begin{block}{Lectura}
     Evaluar el Tustin en $\omega$ en lugar de $\nu$ da un error que crece al acercarse a Nyquist. A $\omega=15$ ($\omega T_s=1.5$) ya son casi $5^\circ$.
   \end{block}

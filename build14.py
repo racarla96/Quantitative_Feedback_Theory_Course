@@ -199,6 +199,17 @@ body=r"""
   \footnotesize Aquí solo describimos el caso MIMO; su diseño completo queda fuera de este curso (ver paso 19).
 \end{frame}
 
+\begin{frame}{Para programarlo: el notebook de este paso}
+  \small
+  Todo lo de este paso se puede \textbf{ejecutar} en el notebook \texttt{notebooks/paso14\_dos\_estados.ipynb}.
+  \begin{itemize}
+    \item Python: el lazo interno/externo en variables de estado, la reducción del template, el límite de $k_v$ y el ruido en la velocidad.
+    \item Cada cálculo de las diapositivas se \textbf{comprueba} en código, con las mismas cifras.
+    \item Incluye celdas \emph{Tu turno} con el ejercicio del paso y la solución plegada.
+  \end{itemize}
+  \footnotesize Requisitos: \texttt{numpy}, \texttt{scipy}, \texttt{matplotlib}; se abre con \texttt{jupyter lab notebooks/}. Ver \texttt{GUIA.md}.
+\end{frame}
+
 \begin{frame}{Resumen}
   \small
   \begin{itemize}

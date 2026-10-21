@@ -163,7 +163,7 @@
   \centering
   \includegraphics[width=0.92\textwidth]{fig/relativo.png}\\[2pt]
   \begin{itemize}
-    \item $\max|T|$ sube de $1.57$ dB a $1.82$ dB con $\sigma=0.05$ y a $2.23$ dB con $\sigma=0.1$. El diseño del paso 12 tenía un margen de $0.02$ dB: \textbf{se gastó entero}.
+    \item $\max|T|$ sube de $1.57$ dB a $1.98$ dB con $\sigma=0.05$ y a $2.45$ dB con $\sigma=0.1$. El diseño del paso 12 tenía un margen de $0.02$ dB: \textbf{se gastó entero}.
     \item Para admitir $\sigma$ hay que \textbf{rediseñar} con la familia ensanchada (bounds más duros, más ganancia o menos ancho de banda).
     \item Con umbral relativo el error final \textbf{no} es cero: se queda dentro de $\pm\sigma\,y$ (a la derecha, $1.07$ con $\sigma=0.1$ y $K=5$, $a=1$).
   \end{itemize}
@@ -220,6 +220,17 @@
   Por eso se \textbf{simula} siempre el lazo con el disparador (como en la figura) tras diseñar.
 \end{frame}
 
+\begin{frame}{Para programarlo: el notebook de este paso}
+  \small
+  Todo lo de este paso se puede \textbf{ejecutar} en el notebook \texttt{notebooks/paso13\_muestreo\_eventos.ipynb}.
+  \begin{itemize}
+    \item Python: el simulador por eventos, la cota $\delta\|t\|_1$, la tabla de ahorro y el umbral relativo.
+    \item Cada cálculo de las diapositivas se \textbf{comprueba} en código, con las mismas cifras.
+    \item Incluye celdas \emph{Tu turno} con el ejercicio del paso y la solución plegada.
+  \end{itemize}
+  \footnotesize Requisitos: \texttt{numpy}, \texttt{scipy}, \texttt{matplotlib}; se abre con \texttt{jupyter lab notebooks/}. Ver \texttt{GUIA.md}.
+\end{frame}
+
 \begin{frame}{Resumen}
   \small
   \begin{itemize}
@@ -239,6 +250,6 @@
   \footnotesize
   \textbf{1.} $\delta\le0.05/1.42=0.035$. En la tabla, $\delta=0.05$ da una desviación real $0.047$ (por debajo de $0.05$), pero la \textbf{garantía} solo llega hasta $0.035$.\\[3pt]
   \textbf{2.} El salto es $G(\infty)\cdot\delta=37.76\cdot0.05\approx1.9$ (el término $-34.03\,z^{-1}$ lo compensa en régimen, no en el primer instante).\\[3pt]
-  \textbf{3.} El diseño tenía margen $0.02$ dB sobre la especificación. Con $\sigma=0.05$ el peor $|T|$ sube de $1.57$ a $1.82$ dB (calculado en 24 fases del disco $\Delta=\sigma e^{j\phi}$, sobre una rejilla de la familia).
+  \textbf{3.} El diseño tenía margen $0.02$ dB sobre la especificación. Con $\sigma=0.05$ el peor $|T|$ sube de $1.57$ a $1.98$ dB (calculado en 24 fases del disco $\Delta=\sigma e^{j\phi}$, sobre una rejilla de la familia).
 \end{frame}
 \end{document}

@@ -477,6 +477,17 @@ double update(double r, double y) {
   \end{alertblock}
 \end{frame}
 
+\begin{frame}{Para programarlo: el notebook de este paso}
+  \small
+  Todo lo de este paso se puede \textbf{ejecutar} en el notebook \texttt{notebooks/paso12\_estabilidad\_limites.ipynb}.
+  \begin{itemize}
+    \item Python: polos de $1+L$, $T_s$ crítico por bisección, las integrales de Bode, la identificación por mínimos cuadrados y la ecuación en diferencias con saturación.
+    \item Cada cálculo de las diapositivas se \textbf{comprueba} en código, con las mismas cifras.
+    \item Incluye celdas \emph{Tu turno} con el ejercicio del paso y la solución plegada.
+  \end{itemize}
+  \footnotesize Requisitos: \texttt{numpy}, \texttt{scipy}, \texttt{matplotlib}; se abre con \texttt{jupyter lab notebooks/}. Ver \texttt{GUIA.md}.
+\end{frame}
+
 \begin{frame}{Resumen}
   \small
   \begin{itemize}
