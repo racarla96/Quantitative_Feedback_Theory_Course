@@ -18,3 +18,4 @@ dist/
 agenda.json
 titles.json
 *.pdf
+.venv/
