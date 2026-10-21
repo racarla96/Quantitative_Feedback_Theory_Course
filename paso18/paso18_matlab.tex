@@ -1,0 +1,537 @@
+\documentclass[aspectratio=169,11pt]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,angles,calc,positioning}
+\usetheme{Madrid}
+\usecolortheme{default}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{blocks}[rounded][shadow=false]
+\newcommand{\ang}[1]{\angle #1^\circ}
+
+\title[QFT en MATLAB]{Paso 18: QFT en MATLAB}
+\subtitle{El mismo código, con otra sintaxis, y comprobado contra Python}
+\author{Curso de control robusto (QFT)}
+\date{}
+\begin{document}
+\begin{frame}\titlepage\end{frame}
+
+\begin{frame}{Dónde encaja este paso}
+  \tiny
+  \begin{enumerate}\setlength{\itemsep}{-2pt}
+    \item[1.] Números complejos \hfill \textcolor{gray}{(hecho)}
+    \item[2.] Funciones de transferencia: $s$, polos y ceros \hfill \textcolor{gray}{(hecho)}
+    \item[3.] Respuesta en frecuencia: $s=j\omega$, magnitud y fase \hfill \textcolor{gray}{(hecho)}
+    \item[4.] Decibelios y escala logarítmica (Bode) \hfill \textcolor{gray}{(hecho)}
+    \item[5.] Realimentación: $L$, $T=\frac{L}{1+L}$, $S=\frac{1}{1+L}$ \hfill \textcolor{gray}{(hecho)}
+    \item[6.] Nichols chart \hfill \textcolor{gray}{(hecho)}
+    \item[7.] Incertidumbre y templates \hfill \textcolor{gray}{(hecho)}
+    \item[8.] Especificaciones $\rightarrow$ bounds \hfill \textcolor{gray}{(hecho)}
+    \item[9.] Loop shaping, prefiltro y verificación \hfill \textcolor{gray}{(hecho)}
+    \item[10.] QFT en control digital \hfill \textcolor{gray}{(hecho)}
+    \item[11.] Dos caminos digitales: $z$ y $w$ \hfill \textcolor{gray}{(hecho)}
+    \item[12.] Estabilidad, límites, más especificaciones y caso real \hfill \textcolor{gray}{(hecho)}
+    \item[13.] Muestreo por eventos con periodo base $T$ \hfill \textcolor{gray}{(hecho)}
+    \item[14.] Sistemas de dos estados: lazo interno y externo \hfill \textcolor{gray}{(hecho)}
+    \item[15.] QFT y sistemas no lineales \hfill \textcolor{gray}{(hecho)}
+    \item[16.] Algoritmos de QFT: cómo funcionan por dentro \hfill \textcolor{gray}{(hecho)}
+    \item[17.] QFT en Python: una biblioteca paso a paso \hfill \textcolor{gray}{(hecho)}
+    \item[\textbf{18.}] \textbf{QFT en MATLAB: el mismo código, otra sintaxis} \hfill $\leftarrow$ estamos aquí
+    \item[19.] Historia, panorama y bibliografía
+  \end{enumerate}
+  \vspace{2pt}
+  \begin{block}{Objetivo de hoy}
+    \footnotesize
+    Traducir la biblioteca del paso 17 a MATLAB y \textbf{comprobar que da lo mismo}. Un punto de honestidad: aquí no hay MATLAB; el código se ha ejecutado en \textbf{GNU Octave 8.4} (paquete \texttt{control}). Está escrito con la parte común de los dos lenguajes, pero \textbf{no} se ha probado en MATLAB.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Python y MATLAB: lo que cambia al traducir}
+  \footnotesize
+  \begin{center}
+  \begin{tabular}{l|l|l}
+    & Python & MATLAB / Octave\\\hline
+    Índices & desde 0 & desde 1\\
+    Especificación & \texttt{lambda L, w: ...} & \texttt{@(L, w) ...}\\
+    Lista de mapas & lista & \emph{cell array} \texttt{\{...\}}\\
+    Matriz 3D & \texttt{L0[..., None] * r} & \texttt{L0 .* reshape(r,1,1,[])}\\
+    Reducir sobre plantas & \texttt{np.all(..., axis=-1)} & \texttt{all(..., 3)}\\
+    Módulo & \texttt{\%} (igual que \texttt{mod}) & \texttt{mod}\\
+    Una función por fichero & no & \textbf{sí} (un \texttt{.m} por función)\\
+    Optimizador global & \texttt{differential\_evolution} & \texttt{ga}, \texttt{particleswarm} (Global Optim. Toolbox)
+  \end{tabular}
+  \end{center}
+  \begin{itemize}
+    \item Sin la Global Optimization Toolbox, el código incluye su \textbf{propia} evolución diferencial (\texttt{qft\_de.m}, 20 líneas) que funciona igual en MATLAB y Octave.
+    \item La expansión implícita (\texttt{L0 .* r3}) exige MATLAB R2016b o posterior.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Los ficheros}
+  \footnotesize
+  \begin{center}
+  \begin{tabular}{l|l}
+    Fichero & Equivale a (Python)\\\hline
+    \texttt{qft\_boundary\_indices.m}, \texttt{qft\_hull\_indices.m} & \texttt{boundary\_indices}, \texttt{hull\_indices}\\
+    \texttt{qft\_spec\_stability.m}, \texttt{\_tracking.m}, \texttt{\_disturbance.m} & \texttt{spec\_*}\\
+    \texttt{qft\_allowed\_map.m} & \texttt{allowed\_map}\\
+    \texttt{qft\_margin\_db.m}, \texttt{qft\_check\_L0.m} & \texttt{margin\_db}, \texttt{check\_L0}\\
+    \texttt{qft\_quad\_*.m}, \texttt{qft\_forbidden\_intervals.m} & \texttt{quad\_*}, \texttt{forbidden\_int.}\\
+    \texttt{qft\_exact\_*.m} & \texttt{exact\_forbidden}, \texttt{exact\_margin\_db}\\
+    \texttt{qft\_de.m}, \texttt{qft\_shape\_de.m} & \texttt{shape\_de}\\
+    \texttt{qft\_synthesize\_refine.m}, \texttt{qft\_verify.m} & \texttt{synthesize\_refine}, \texttt{verify}\\
+    \texttt{qft\_demo.m}, \texttt{qft\_test.m}, \texttt{qft\_control\_demo.m} & demo, pruebas, comprobaciones
+  \end{tabular}
+  \end{center}
+  \footnotesize
+  Para usarlos: poner la carpeta en el \emph{path} (\texttt{addpath('matlab')}) y ejecutar \texttt{qft\_demo}.
+\end{frame}
+
+\begin{frame}[fragile]{1a. Bordes de la caja}
+\footnotesize
+\begin{verbatim}
+function idx = qft_boundary_indices(thetas)
+% Plantas con ALGUN parametro en un extremo de su rango (borde de la caja).
+lo = min(thetas, [], 1);  hi = max(thetas, [], 1);
+isEdge = (thetas == lo) | (thetas == hi);      % expansion implicita [N x np]
+idx = find(any(isEdge, 2));
+end
+\end{verbatim}
+\footnotesize \texttt{(thetas == lo)} compara cada columna con su mínimo por expansión implícita; \texttt{any(..., 2)} marca las filas con algún parámetro extremo.
+\end{frame}
+
+\begin{frame}[fragile]{1b. Especificaciones}
+\scriptsize
+\begin{verbatim}
+function f = qft_spec_stability(Ws)
+% |L/(1+L)| <= Ws para todas las plantas (L: [nph x nmg x N])
+f = @(L, w) all(abs(L ./ (1 + L)) <= Ws, 3);
+end
+\end{verbatim}
+\scriptsize
+\begin{verbatim}
+function f = qft_spec_disturbance(Wd)
+% |1/(1+L)| <= Wd(w)
+f = @(L, w) all(1 ./ abs(1 + L) <= Wd(w), 3);
+end
+\end{verbatim}
+\scriptsize
+\begin{verbatim}
+function f = qft_spec_tracking(delta_db)
+% dispersion de |T_i| (dB) <= delta_db(w)
+tdb = @(L) 20*log10(abs(L ./ (1 + L)));
+f = @(L, w) (max(tdb(L), [], 3) - min(tdb(L), [], 3)) <= delta_db(w);
+end
+\end{verbatim}
+\footnotesize Las especificaciones son manejadores de función sobre una matriz \texttt{[nph x nmg x N]}; \texttt{all(..., 3)} reduce sobre las plantas.
+\end{frame}
+
+\begin{frame}[fragile]{2. El mapa de bounds}
+\scriptsize
+\begin{verbatim}
+function ok = qft_allowed_map(w, ratios, specs, idx)
+% Mapa logico [nph x nmg]: true si L0 (fase PH, modulo MG) cumple TODAS las specs
+% para las plantas del template (r_i = P_i/P_0).  specs: cell de handles @(L,w).
+PH = (-360:1:-1).';                    % grados
+MG = -60:0.5:60;                       % dB
+if nargin > 3 && ~isempty(idx), ratios = ratios(idx); end
+L0 = 10.^(MG/20) .* exp(1i*deg2rad(PH));            % [360 x 241]
+L  = L0 .* reshape(ratios(:), 1, 1, []);            % [360 x 241 x N]
+ok = true(size(L0));
+for k = 1:numel(specs)
+    ok = ok & specs{k}(L, w);
+end
+end
+\end{verbatim}
+
+\footnotesize
+\begin{itemize}
+\item \texttt{L0 .* reshape(ratios(:), 1, 1, [])}: de $360\times241$ a $360\times241\times N$.
+\item Mismo coste de memoria que en Python (78 MB con 56 plantas).
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{3a. Margen}
+\footnotesize
+\begin{verbatim}
+function m = qft_margin_db(okmap, phase, gain_db)
+% Distancia vertical (dB) al borde del mapa: >0 permitido, <0 prohibido.
+PH = (-360:1:-1).';  MG = -60:0.5:60;
+[~, i] = min(abs(mod(phase - PH + 180, 360) - 180));
+col = okmap(i, :);
+[~, j] = min(abs(MG - gain_db));
+if col(j), bad = ~col; else, bad = col; end
+if ~any(bad)
+    if col(j), m = 60; else, m = -60; end
+    return
+end
+d = min(abs(MG(bad) - gain_db));
+if col(j), m = d; else, m = -d; end
+end
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]{3b. Comprobación de $L_0$}
+\footnotesize
+\begin{verbatim}
+function out = qft_check_L0(L0fun, wlist, maps)
+% Margen (dB) de L0 frente a los mapas, frecuencia a frecuencia.
+out = zeros(size(wlist));
+for k = 1:numel(wlist)
+    L = L0fun(wlist(k));
+    p = rad2deg(angle(L));  if p > 0, p = p - 360; end
+    out(k) = qft_margin_db(maps{k}, p, 20*log10(abs(L)));
+end
+end
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]{4a. Ejemplo: familia y especificaciones}
+\scriptsize
+\begin{verbatim}
+% qft_demo.m - Reproduce el diseno continuo de los pasos 7-9
+% (mismo ejemplo que demo_qft.py)
+clear; clc;
+P  = @(w, K, a) K ./ (1i*w .* (1i*w + a));          % planta K/(s(s+a))
+[KK, AA] = ndgrid(linspace(1,5,17), linspace(1,3,13));
+thetas = [KK(:), AA(:)];                              % 221 plantas
+Ws = 1.2;
+TU = @(w) abs(1 ./ ((1i*w/8).^2 + 2*0.6*(1i*w/8) + 1));
+TL = @(w) abs(1 ./ (1i*w/1.2 + 1).^3);
+delta_db = @(w) 20*log10(TU(w) ./ TL(w));
+Wd = @(w) (w <= 0.5)*0.3 + (w > 0.5 & w <= 1.0)*0.5 + (w > 1.0)*10.0;
+specs = {qft_spec_stability(Ws), qft_spec_tracking(delta_db), ...
+         qft_spec_disturbance(Wd)};
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]{4b. Ejemplo: mapas y comprobación}
+\scriptsize
+\begin{verbatim}
+idx = qft_boundary_indices(thetas);
+Pfam = @(w) P(w, thetas(:,1), thetas(:,2));
+make_map = @(w) qft_allowed_map(w, Pfam(w) / P(w, 1, 1), specs, idx);
+
+wlist = [0.1 0.5 1 2 5 10 20 50];
+maps = arrayfun(make_map, wlist, 'UniformOutput', false);
+G9 = @(s) 5*(1 + s/2) ./ (1 + s/20);
+L0 = @(w) G9(1i*w) * P(w, 1, 1);
+m = qft_check_L0(L0, wlist, maps);
+fprintf('margenes (dB): %s\n', mat2str(round(100*m)/100));
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]{Salida real (Octave 8.4)}
+  \footnotesize
+  \begin{verbatim}
+margenes (dB): [6.45 0.79 0.93 17.94 60 60 5.54 16.12]
+verificacion densa G9: 0 frecuencias fallan
+  \end{verbatim}
+  \begin{itemize}
+    \item Los márgenes son \textbf{idénticos} a los de Python (paso 17): $6.45,\,0.79,\,0.93,\,17.94,\,60,\,60,\,5.54,\,16.12$ dB.
+    \item La verificación densa tampoco encuentra fallos.
+  \end{itemize}
+  \begin{alertblock}{Por qué importa}
+    Dos implementaciones independientes, en dos lenguajes, dan el mismo número en las ocho frecuencias: es la mejor prueba de que no hay un error de programación en el \textbf{algoritmo}.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}[fragile]{3c. Bounds exactos: estabilidad y perturbación}
+\scriptsize
+\begin{verbatim}
+function q = qft_quad_stability(ws)
+% |T| <= ws: a x^2 + b x + c >= 0 con x = |L0|, u = r_i exp(j fase)
+q = @(u) deal((ws^2 - 1)*abs(u).^2, 2*ws^2*real(u), ws^2*ones(size(u)));
+end
+\end{verbatim}
+\scriptsize
+\begin{verbatim}
+function q = qft_quad_disturbance(wd)
+% |S| <= wd
+q = @(u) deal(abs(u).^2, 2*real(u), (1 - 1/wd^2)*ones(size(u)));
+end
+\end{verbatim}
+\footnotesize Cada función da $(a,b,c)$ de $a x^2+bx+c\ge0$ con $x=|L_0|$, igual que en Python.
+\end{frame}
+
+\begin{frame}[fragile]{3d. Bounds exactos: seguimiento por pares}
+\scriptsize
+\begin{verbatim}
+function q = qft_quad_tracking_pairs(R)
+% |T_d| / |T_e| <= R para cada par ordenado (d, e) de plantas
+q = @(u) pairs_(u, R);
+end
+function [a, b, c] = pairs_(u, R)
+[ud, ue] = ndgrid(u(:), u(:));
+m = ~eye(numel(u));
+ud = ud(m);  ue = ue(m);
+a = abs(ud).^2 .* abs(ue).^2 * (R^2 - 1);
+b = 2*(R^2*abs(ue).^2 .* real(ud) - abs(ud).^2 .* real(ue));
+c = R^2*abs(ue).^2 - abs(ud).^2;
+end
+\end{verbatim}
+\footnotesize \texttt{ndgrid} sustituye a \texttt{meshgrid(indexing='ij')} de Python.
+\end{frame}
+
+\begin{frame}[fragile]{3e. Bounds exactos: intervalos}
+\scriptsize
+\begin{verbatim}
+function [lo, hi] = qft_forbidden_intervals(a, b, c)
+% Intervalos de x > 0 donde a x^2 + b x + c < 0 (vectores a, b, c).
+a = a(:); b = b(:); c = c(:);
+D = b.^2 - 4*a.*c;
+s = sqrt(max(D, 0));
+r1 = (-b - s) ./ (2*a);  r2 = (-b + s) ./ (2*a);
+xa = min(r1, r2);  xb = max(r1, r2);
+pos  = (a >  1e-12) & (D > 0);              % parabola hacia arriba: prohibido entre raices
+neg  = (a < -1e-12);                        % hacia abajo: prohibido fuera de las raices
+both = neg & (D > 0);
+allx = neg & (D <= 0);
+lo = [xa(pos); zeros(nnz(both),1); xb(both); zeros(nnz(allx),1)];
+hi = [xb(pos); xa(both); inf(nnz(both),1);  inf(nnz(allx),1)];
+ok = hi > max(lo, 0);
+lo = max(lo(ok), 0);  hi = hi(ok);
+end
+\end{verbatim}
+\footnotesize Intervalos prohibidos de $x>0$ para vectores $a,b,c$.
+\end{frame}
+
+\begin{frame}[fragile]{3f. Bounds exactos: unión}
+\scriptsize
+\begin{verbatim}
+function iv = qft_exact_forbidden(r_edge, phase_deg, quads)
+% Union de intervalos prohibidos de |L0| (dB) para una fase concreta. iv = [lo hi] en dB.
+u = r_edge(:) * exp(1i*deg2rad(phase_deg));
+lo = [];  hi = [];
+for k = 1:numel(quads)
+    [a, b, c] = quads{k}(u);
+    [l, h] = qft_forbidden_intervals(a, b, c);
+    lo = [lo; l];  hi = [hi; h]; %#ok<AGROW>
+end
+if isempty(lo), iv = zeros(0, 2); return, end
+[lo, o] = sort(lo);  hi = hi(o);
+reach = cummax(hi);
+start = [true; lo(2:end) > reach(1:end-1)];
+ends  = [start(2:end); true];
+iv = [20*log10(max(lo(start), 1e-12)), 20*log10(reach(ends))];
+end
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]{3g. Bounds exactos: margen}
+\footnotesize
+\begin{verbatim}
+function m = qft_exact_margin_db(r_edge, phase_deg, gain_db, quads)
+% Margen vertical exacto (dB) de L0 a la frontera: > 0 si esta permitido.
+iv = qft_exact_forbidden(r_edge, phase_deg, quads);
+if isempty(iv), m = 60; return, end
+inside = any(iv(:,1) <= gain_db & gain_db <= iv(:,2));
+d = min(min(abs(iv(:,1) - gain_db), abs(iv(:,2) - gain_db)));
+if inside, m = -d; else, m = d; end
+end
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]{5a. Evolución diferencial portátil}
+\scriptsize
+\begin{verbatim}
+function [xbest, fbest] = qft_de(cost, lb, ub, seed, maxiter)
+% Evolucion diferencial minima (rand/1/bin), portable MATLAB/Octave.
+rand('twister', seed); randn('state', seed); %#ok<RAND>
+n = numel(lb);  NP = 15*n;  F = 0.7;  CR = 0.8;
+X = lb + rand(NP, n) .* (ub - lb);
+f = arrayfun(@(i) cost(X(i,:)), 1:NP);
+for it = 1:maxiter
+    for i = 1:NP
+        r = randperm(NP, 4);  r = r(r ~= i);  r = r(1:3);
+        v = X(r(1),:) + F*(X(r(2),:) - X(r(3),:));
+        v = min(max(v, lb), ub);
+        jr = randi(n);  mask = rand(1, n) < CR;  mask(jr) = true;
+        u = X(i,:);  u(mask) = v(mask);
+        fu = cost(u);
+        if fu <= f(i), X(i,:) = u; f(i) = fu; end
+    end
+end
+[fbest, k] = min(f);  xbest = X(k,:);
+end
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]{5b. Búsqueda de $(k,z,p)$}
+\footnotesize
+\begin{verbatim}
+function [x, f] = qft_shape_de(P0fun, wlist, maps, seed, maxiter)
+% Busca (k, z, p) de G = k(1+s/z)/(1+s/p) que cumple los mapas
+% con el menor G(inf) = k p / z.
+Gfun = @(x, w) x(1) * (1 + 1i*w/x(2)) ./ (1 + 1i*w/x(3));
+marg = @(x) qft_check_L0(@(w) Gfun(x, w) .* P0fun(w), wlist, maps);
+cost = @(x) x(1)*x(3)/x(2) + 1e3*sum(max(-marg(x), 0));
+[x, f] = qft_de(cost, [0.5 0.2 2], [30 20 200], seed, maxiter);
+end
+\end{verbatim}
+\footnotesize \texttt{marg(x)} devuelve los márgenes en dB de todas las frecuencias; \texttt{max(-marg(x), 0)} suma solo las violaciones.
+\end{frame}
+
+\begin{frame}[fragile]{6. Refinado}
+\scriptsize
+\begin{verbatim}
+function [x, hist] = qft_synthesize_refine(P0fun, Pfam, specs, wlist, ...
+                                           wdense, make_map, iters, add)
+% Bucle de refinado: DE -> verificacion densa -> anadir frecuencias
+% que fallan -> repetir.
+wl = wlist(:).';  maps = arrayfun(@(w) make_map(w), wl, 'UniformOutput', false);
+hist = [];
+for it = 1:iters
+    [x, ~] = qft_shape_de(P0fun, wl, maps, it, 60);
+    G = @(s) x(1)*(1+s/x(2))./(1+s/x(3));
+    bad = qft_verify(@(w) G(1i*w) .* Pfam(w), wdense, specs);
+    hist(end+1,:) = [x, x(1)*x(3)/x(2), numel(bad), numel(wl)]; %#ok<AGROW>
+    if isempty(bad), break, end
+    new = bad(round(linspace(1, numel(bad), min(add, numel(bad)))));
+    for w = new
+        wl(end+1) = w; maps{end+1} = make_map(w); %#ok<AGROW>
+    end
+end
+end
+\end{verbatim}
+\footnotesize \texttt{rand('twister', seed)} fija la semilla en MATLAB y Octave; \texttt{rng} solo existe en MATLAB moderno.
+\end{frame}
+
+\begin{frame}[fragile]{Resultado del refinado (Octave)}
+  \footnotesize
+  \begin{verbatim}
+     k       z       p     G(inf)  fallos  n_w
+  5.111   2.333  14.154    31.01     28     8
+  5.118   2.534  16.211    32.74     11    11
+  5.103   2.482  16.177    33.26      6    14
+  5.148   2.559  16.797    33.79      0    17
+  \end{verbatim}
+  \begin{center}
+  \begin{tabular}{l|c|c|c|c}
+    & $k,\,z,\,p$ & $G(\infty)$ & Frecuencias & Tiempo\\\hline
+    Python (paso 17) & $5.10,\ 2.52,\ 16.4$ & 33.2 & 21 & 16.5 s\\
+    Octave (aquí) & $5.15,\ 2.56,\ 16.8$ & 33.8 & 17 & 40 s
+  \end{tabular}
+  \end{center}
+  \begin{itemize}
+    \item Los dos diseños son \textbf{distintos} pero válidos (0 fallos). La evolución diferencial es estocástica y las dos usan generadores distintos: no se espera el mismo $(k,z,p)$, sí un $G(\infty)\approx33$.
+    \item Los tiempos \textbf{no son comparables} (Octave frente a Python; no se ha medido MATLAB).
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Pruebas (qft\_test.m)}
+  \footnotesize
+  \begin{verbatim}
+w=  0.1: borde    0 celdas erroneas | hull   21
+w=    1: borde    0 celdas erroneas | hull    3
+w=    2: borde    0 celdas erroneas | hull  263
+w=    5: borde    0 celdas erroneas | hull  261
+w=   20: borde    0 celdas erroneas | hull  260
+w=1: formula cerrada vs rejilla, celdas distintas = 0
+w=2: formula cerrada vs rejilla, celdas distintas = 0
+verificacion densa: frecuencias que fallan = 0
+w=0.5: exacto vs rejilla, celdas distintas = 0; margen exacto = 0.701 dB
+w=1: exacto vs rejilla, celdas distintas = 0; margen exacto = 0.627 dB
+w=2: exacto vs rejilla, celdas distintas = 0; margen exacto = 17.673 dB
+  \end{verbatim}
+  \begin{itemize}
+    \item Las cuatro pruebas dan \textbf{exactamente} los mismos números que en Python, incluidas las celdas erróneas de la envolvente convexa (\texttt{convhull}).
+    \item Esa coincidencia, celda a celda, es lo que permite decir que la biblioteca MATLAB y la de Python son la misma.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Con Control System Toolbox}
+\scriptsize
+\begin{verbatim}
+pkg load control
+s  = tf('s');
+G  = 5*(1 + s/2)/(1 + s/20);              % compensador del paso 9
+P0 = 1/(s*(s + 1));                       % nominal K=1, a=1
+L0 = G*P0;
+[Gm, Pm, Wcg, Wcp] = margin(L0);
+fprintf('Nominal: GM %.1f dB, PM %.1f grados (en %.2f rad/s)\n', ...
+        20*log10(Gm), Pm, Wcp);
+worst = -inf;
+for K = linspace(1,5,17)
+    for a = linspace(1,3,13)
+        Tcl = feedback(G*K/(s*(s+a)), 1);
+        worst = max(worst, max(real(pole(Tcl))));
+    end
+end
+fprintf('Peor Re(polo) de la familia: %.2f\n', worst);
+Ts = 0.04;
+Pd = c2d(5/(s*(s+3)), Ts, 'zoh');          % K=5, a=3
+[num, den] = tfdata(Pd, 'v');
+fprintf('num = %s\nden = %s\n', mat2str(num, 5), mat2str(den, 5));
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]{Salida de las comprobaciones}
+\footnotesize\begin{verbatim}
+Nominal: GM Inf dB, PM 66.2 grados (en 2.85 rad/s)
+Peor Re(polo) de la familia: -1.19
+num = [0.0038447 0.003694]
+den = [1 -1.8869 0.88692]
+\end{verbatim}
+\end{frame}
+
+\begin{frame}{Qué aporta la toolbox y qué no}
+  \small
+  \begin{itemize}
+    \item \textbf{Control System Toolbox}: \texttt{tf}, \texttt{margin}, \texttt{feedback}, \texttt{pole}, \texttt{c2d}, \texttt{nichols}, \texttt{bode}. Se usa para \textbf{comprobar} (márgenes, polos, discretización) y dibujar.
+    \item La salida de arriba coincide con Python: margen de fase $66.2^\circ$ ($66.17^\circ$ en NumPy), peor polo $-1.19$ y la discretización ZOH de $5/(s(s+3))$ a $T_s=0.04$ ($0.00384z+0.00369$ sobre $z^2-1.88692z+0.88692$).
+    \item \textbf{Toolbox de QFT}: existe una toolbox de terceros (Borghesani, Chait, Yaniv, \emph{Quantitative Feedback Theory Toolbox}) con diseño interactivo. \textbf{No} se ha usado aquí; la biblioteca de estos pasos es independiente.
+    \item \textbf{Global Optimization Toolbox}: \texttt{ga} o \texttt{particleswarm} pueden sustituir a \texttt{qft\_de}. \textbf{No} se han probado aquí.
+  \end{itemize}
+  \begin{alertblock}{Qué no se ha probado}
+    Nada de esto se ha ejecutado en MATLAB; sí en Octave 8.4. Si algo falla en tu MATLAB, lo más probable es la expansión implícita (versiones antiguas) o \texttt{convhull}.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Cuándo usar cuál}
+  \footnotesize
+  \begin{center}
+  \begin{tabular}{l|l|l}
+    & Python & MATLAB\\\hline
+    Coste & gratis & licencia (Octave es gratis)\\
+    Control clásico & \texttt{python-control} & Control System Toolbox\\
+    QFT & nada estándar (esta biblioteca) & toolbox de terceros (esta biblioteca)\\
+    Optimización global & \texttt{scipy} & Global Optim. Toolbox o \texttt{qft\_de}\\
+    Integración con ROS 2 / C++ & directa (\texttt{rclpy}) & vía toolbox ROS\\
+    Prototipado de gráficas & \texttt{matplotlib} & muy cómodo
+  \end{tabular}
+  \end{center}
+  \begin{itemize}
+    \item Para un curso o una tesis: el que ya tenga el equipo. Los \textbf{algoritmos} son los mismos (paso 16).
+    \item Para llevar el regulador final a un robot: la ecuación en diferencias de salida (pasos 12 y 14) es independiente del lenguaje.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Resumen}
+  \small
+  \begin{itemize}
+    \item Una biblioteca de 12 funciones \texttt{.m} (más 3 scripts), traducción directa de la de Python.
+    \item Comprobada en \textbf{Octave 8.4}: mismos márgenes (6.45, 0.79, 0.93, ...) y mismas pruebas que en Python, celda a celda.
+    \item Evolución diferencial propia (\texttt{qft\_de}): funciona sin toolbox; diseño distinto pero válido ($G(\infty)=33.8$).
+    \item No probada en MATLAB; la toolbox de QFT de terceros no se ha usado.
+  \end{itemize}
+  \begin{block}{Ejercicio}
+    (1) ¿Por qué hay que reemplazar \texttt{L0[..., None] * r} por \texttt{reshape(r,1,1,[])}? (2) Escribe \texttt{qft\_spec\_noise} en MATLAB. (3) ¿Cómo comprobarías en MATLAB real que el código funciona, sin mirar el resultado de Python?
+  \end{block}
+\end{frame}
+
+\appendix
+\begin{frame}[fragile]{Solución del ejercicio}
+  \footnotesize
+  \textbf{1.} Porque MATLAB no tiene \texttt{None}/\texttt{newaxis}. Se crea una matriz $1\times1\times N$ con \texttt{reshape} y la multiplicación elemento a elemento expande las dos primeras dimensiones.\\[3pt]
+  \textbf{2.}
+  \begin{verbatim}
+function f = qft_spec_noise(Tmax_db)
+f = @(L, w) all(abs(L ./ (1 + L)) <= 10^(Tmax_db/20), 3);
+end
+  \end{verbatim}
+  \textbf{3.} Con las tres pruebas de \texttt{qft\_test.m}: la fórmula cerrada del bound de estabilidad y el borde frente a toda la familia son comprobaciones \textbf{independientes} de Python.
+\end{frame}
+\end{document}

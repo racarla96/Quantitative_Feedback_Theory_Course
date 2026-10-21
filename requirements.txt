@@ -1,0 +1,10 @@
+numpy
+scipy
+matplotlib
+# notebooks
+jupyter
+nbformat
+nbconvert
+ipykernel
+# opcional: informe PDF (pypdf) para marcadores
+pypdf

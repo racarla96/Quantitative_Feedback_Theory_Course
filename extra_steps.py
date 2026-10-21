@@ -1,0 +1,1 @@
+{13:"paso13/paso13_muestreo_eventos.tex",14:"paso14/paso14_dos_estados.tex",15:"paso15/paso15_no_lineales.tex",16:"paso16/paso16_algoritmos.tex",17:"paso17/paso17_python.tex",18:"paso18/paso18_matlab.tex",19:"paso19/paso19_historia.tex"}
